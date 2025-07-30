@@ -134,3 +134,16 @@ ModelBufferPair INIT_MODEL_BUFFERS() {
 
     return pair;
 }
+
+GLuint INIT_FRAME_BUFFER(GLuint depthCubemap) {
+    GLuint depthFBO;
+
+    glGenFramebuffers(1, &depthFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    return depthFBO;
+}

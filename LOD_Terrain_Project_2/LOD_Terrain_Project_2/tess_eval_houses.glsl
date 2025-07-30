@@ -4,8 +4,7 @@
 
 layout(quads, equal_spacing, cw) in;
 
-const float SCALE = 0.04;
-
+uniform float SCALE;
 uniform mat4 model;
 uniform vec3 originalPoints[16];
 
@@ -67,9 +66,7 @@ vec3 getDisplacedPos(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 p3) {
         }
     }
 
-    bool isHorizontalFace = abs(normal_tcs[0].y) > 0.99;
-
-    if (onBlockBorder || isHorizontalFace) {
+    if (onBlockBorder) {
         height = 0.0; // disattiva displacement
     }
 
@@ -110,14 +107,8 @@ void main() {
         normal = -normal;
     }
 
-    bool isHorizontalFace = abs(normal_tcs[0].y) > 0.99;
-
     worldPos = model * vec4(pos, 1.0);
     normalTES = normalize(transpose(inverse(mat3(model))) * normal);
-    if (isHorizontalFace) {
-        tesUV = vec2(-1.0, -1.0);
-    }
-    else {
-        tesUV = remapUV(uv, normal_tcs[0]);
-    }
+
+    tesUV = remapUV(uv, normal_tcs[0]);
 }

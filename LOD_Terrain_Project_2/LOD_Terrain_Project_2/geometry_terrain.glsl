@@ -17,7 +17,6 @@ out vec3 normal_gs;
 uniform mat4 view;
 uniform mat4 proj;
 
-
 void main() {
     for (int i = 0; i < 3; ++i) {
         gl_Position = proj * view * worldPos[i];

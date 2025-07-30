@@ -146,8 +146,8 @@ vector<vec3> generateSphericalBase(const vec3& center, float radius) {
 
 tuple<vector<float>, vector<float>, vector<vec3>> generateBlocks(const vector<vec3>& positions, int subdivisions, bool isHedge) {
     float baseSize = 1.0f;
-    float minHeight = isHedge ? 0.2f : 1.5f;
-    float maxHeight = isHedge ? 0.4f : 2.0f;
+    float minHeight = isHedge ? 0.4f : 1.5f;
+    float maxHeight = isHedge ? 0.6f : 2.0f;
 
     vector<float> blocks;
     vector<float> heights;

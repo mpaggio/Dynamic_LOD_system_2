@@ -6,3 +6,4 @@ BufferPair INIT_SIMPLE_VERTEX_BUFFERS(vector<float> planeVertices);
 BufferPair INIT_HOUSE_BUFFERS(vector<float> vertices, vector<float> centers);
 GLuint INIT_TRANSFORM_FEEDBACK_BUFFERS();
 ModelBufferPair INIT_MODEL_BUFFERS();
+GLuint INIT_FRAME_BUFFER(GLuint depthCubemap);

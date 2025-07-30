@@ -109,7 +109,7 @@ int main() {
 
     //BLOCKS
     int numHouses = 2;
-    int numHedges = 2;
+    int numHedges = 3;
     int houseSubdivision = 2;
     auto positionData = generateNonOverlappingPositions(terrainVertices, division, size, numHouses, numHedges);
     vector<vec3> housePositions = positionData.first;
@@ -183,7 +183,7 @@ int main() {
         "geometry_houses.glsl",
         "fragment_houses.glsl"
     );
-
+    
 
     //TEXTURES
     GLuint modelTexture = loadSingleTexture("Model/Knight/textures/texture_embedded_0.png");
@@ -228,6 +228,7 @@ int main() {
     int lightColorLocTerrain_houses = glGetUniformLocation(housesProgram, "light.color");
     int lightPowerLocTerrain_houses = glGetUniformLocation(housesProgram, "light.power");
     int originalVerticesLoc_houses = glGetUniformLocation(housesProgram, "originalPoints");
+    int scaleLoc_houses = glGetUniformLocation(housesProgram, "SCALE");
     //Roofs program
     int modelLoc_roofs = glGetUniformLocation(roofProgram, "model");
     int viewLoc_roofs = glGetUniformLocation(roofProgram, "view");
@@ -250,6 +251,7 @@ int main() {
     int lightColorLocTerrain_molds = glGetUniformLocation(moldsProgram, "light.color");
     int lightPowerLocTerrain_molds = glGetUniformLocation(moldsProgram, "light.power");
     int originalVerticesLoc_molds = glGetUniformLocation(moldsProgram, "originalPoints");
+    int scaleLoc_molds = glGetUniformLocation(moldsProgram, "SCALE");
     //Model program
     int modelLoc = glGetUniformLocation(modelProgram, "model");
     int viewLoc = glGetUniformLocation(modelProgram, "view");
@@ -258,7 +260,7 @@ int main() {
     int lightPosLoc = glGetUniformLocation(modelProgram, "light.position");
     int lightColorLoc = glGetUniformLocation(modelProgram, "light.color");
     int lightPowerLoc = glGetUniformLocation(modelProgram, "light.power");
-    GLuint bonesLoc = glGetUniformLocation(modelProgram, "bones");
+    int bonesLoc = glGetUniformLocation(modelProgram, "bones");
     //Skybox program
     int viewLocSkybox = glGetUniformLocation(skyboxProgram, "View");
     int projLocSkybox = glGetUniformLocation(skyboxProgram, "Projection");
@@ -291,12 +293,14 @@ int main() {
 
     //MAIN LOOP
     while (!glfwWindowShouldClose(window)) {
-
+        //TIME
         long long currentTimeMillis = static_cast<long long>(glfwGetTime() * 1000.0);
         float animationTimeSec = ((float)(currentTimeMillis - startTimeMillis)) / 1000.0f;
 
+        //CLEAR
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        //LINE MODE
         if (lineMode) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Imposta la modalità Wireframe per vedere le suddivisioni fatte dallo shader
         }
@@ -305,8 +309,8 @@ int main() {
         }
 
         float timeValue = glfwGetTime(); //Restituisce il tempo in secondi dall'avvio
-
         glPatchParameteri(GL_PATCH_VERTICES, 4); //Dice a OpenGL che ogni patch ha 4 vertici
+
 
         //MODEL PROGRAM
         glUseProgram(modelProgram);
@@ -445,6 +449,7 @@ int main() {
         glUniform3fv(lightColorLocTerrain_houses, 1, value_ptr(light.color));
         glUniform1f(lightPowerLocTerrain_houses, light.power);
         glUniform3fv(originalVerticesLoc_houses, 16, reinterpret_cast<const float*>(blocksOriginalVertices));
+        glUniform1f(scaleLoc_houses, 0.04f);
 
         glBindVertexArray(housesPair.vao);
         glDrawArrays(GL_PATCHES, 0, blocksPatches.size() / 3);
@@ -503,6 +508,7 @@ int main() {
         glUniform3fv(lightColorLocTerrain_molds, 1, value_ptr(light.color));
         glUniform1f(lightPowerLocTerrain_molds, light.power);
         glUniform3fv(originalVerticesLoc_molds, 16, reinterpret_cast<const float*>(moldsOriginalVertices));
+        glUniform1f(scaleLoc_molds, 0.02f);
 
         glBindVertexArray(moldsPair.vao);
         glDrawArrays(GL_PATCHES, 0, moldsPatches.size() / 3);

@@ -15,16 +15,15 @@ struct PointLight {
 uniform vec3 ViewPos;
 uniform PointLight light;
 
-uniform sampler2D texture0; //color
+uniform sampler2D texture0; // color texture
 
 void main() {
     vec3 norm = normalize(normal_gs);
-
     vec3 lightDir = normalize(light.position - worldPos_gs);
 
     float ambientStrength = 0.1;
     vec3 ambient = ambientStrength * light.color;
-    
+
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * light.color;
 

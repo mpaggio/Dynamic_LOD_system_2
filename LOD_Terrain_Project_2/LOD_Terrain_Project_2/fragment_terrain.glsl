@@ -24,7 +24,7 @@ void main() {
 
     float ambientStrength = 0.1;
     vec3 ambient = ambientStrength * light.color;
-    
+
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * light.color;
 

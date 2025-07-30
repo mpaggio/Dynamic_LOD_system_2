@@ -24,7 +24,7 @@ void main() {
 
     float ambientStrength = 0.1;
     vec3 ambient = ambientStrength * light.color;
-    
+
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * light.color;
 
@@ -34,13 +34,7 @@ void main() {
     float specularStrength = 0.5;
     vec3 specular = specularStrength * spec * light.color;
 
-    vec3 baseColor;
-    if (tesUV_gs.x == -1.0 && tesUV_gs.y == -1.0) {
-        baseColor = vec3(0.7, 0.7, 0.7);
-    }
-    else {
-        baseColor = texture(texture0, tesUV_gs).rgb;
-    }
+    vec3 baseColor = texture(texture0, tesUV_gs).rgb;
 
     vec3 lighting = (ambient + diffuse + specular) * baseColor * light.power;
 

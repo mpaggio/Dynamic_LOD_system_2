@@ -4,7 +4,7 @@
 
 
 layout(triangles) in;
-layout(triangle_strip, max_vertices = 12) out;
+layout(triangle_strip, max_vertices = 3) out;
 
 in vec4 worldPos[];
 in vec3 normalTES[];
