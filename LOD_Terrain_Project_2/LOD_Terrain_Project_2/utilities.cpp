@@ -8,6 +8,13 @@ float randomFloat(float min, float max) {
     return dis(gen);
 }
 
+int randomInt(int min, int max) {
+    static random_device rd;
+    static mt19937 gen(rd());
+    uniform_int_distribution<> dis(min, max);
+    return dis(gen);
+}
+
 // Genera posizione random dentro quadrato di lato L
 vec3 randomPosition(float L) {
     return vec3(
@@ -17,10 +24,9 @@ vec3 randomPosition(float L) {
     );
 }
 
-pair<vector<vec3>, vector<vec3>> generateNonOverlappingPositions(const vector<float>& plane, int division, float width, int numBlocks, int numHedges) {
-    float cellSize = 1.0f; // Supponiamo che ogni cella sia larga 1.0f (modifica se diverso)
-    int cellsPerBlock = ceil(width / cellSize); // Quante celle sono occupate da un blocco
-    int padding = cellsPerBlock / 2;
+tuple<vector<vec3>, vector<vec3>, vector<vec3>> generateNonOverlappingPositions(const vector<float>& plane, int division, int numBlocks, int numHedges, int numLamps) {
+    
+    int padding = 1;
 
     vector<vec3> positions;
     vector<vector<bool>> occupied(division + 1, vector<bool>(division + 1, false));
@@ -28,7 +34,7 @@ pair<vector<vec3>, vector<vec3>> generateNonOverlappingPositions(const vector<fl
     mt19937 rng(std::random_device{}());
     uniform_int_distribution<int> dist(padding, division - padding - 1); // Evita i bordi
 
-    int total = numBlocks + numHedges;
+    int total = numBlocks + numHedges + numLamps;
     int attempts = 0;
     const int maxAttempts = total * 30;
 
@@ -69,7 +75,8 @@ pair<vector<vec3>, vector<vec3>> generateNonOverlappingPositions(const vector<fl
     }
 
     vector<vec3> blockPositions(positions.begin(), positions.begin() + numBlocks);
-    vector<vec3> hedgePositions(positions.begin() + numBlocks, positions.end());
+    vector<vec3> hedgePositions(positions.begin() + numBlocks, positions.begin() + numBlocks + numHedges);
+    vector<vec3> treePositions(positions.begin() + numBlocks + numHedges, positions.end());
 
-    return { blockPositions, hedgePositions };
+    return { blockPositions, hedgePositions, treePositions };
 }

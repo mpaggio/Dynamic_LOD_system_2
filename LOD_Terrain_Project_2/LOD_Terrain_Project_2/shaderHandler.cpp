@@ -100,6 +100,41 @@ unsigned int createShaderProgram(const char* vs, const char* tcs, const char* te
     return program; //Restituisce l'ID dello shader program
 }
 
+unsigned int createCustomProgram(const char* vs, const char* tcs, const char* tes, const char* fs) {
+    unsigned int vertex = compileShader(vs, GL_VERTEX_SHADER); //Vertex Shader
+    unsigned int tc = compileShader(tcs, GL_TESS_CONTROL_SHADER); //Tessellation Control Shader
+    unsigned int te = compileShader(tes, GL_TESS_EVALUATION_SHADER); //Tessellation Evaluation Shader
+    unsigned int fragment = compileShader(fs, GL_FRAGMENT_SHADER); //Fragment Shader
+
+    unsigned int program = glCreateProgram(); //Crea un nuovo shader program
+
+    //Allega tutti gli shader allo shader program
+    glAttachShader(program, vertex);
+    glAttachShader(program, tc);
+    glAttachShader(program, te);
+    glAttachShader(program, fragment);
+
+    glLinkProgram(program); //Collega gli shader insieme in un unico programma eseguibile dalla GPU
+
+    int success;
+    glGetProgramiv(program, GL_LINK_STATUS, &success); //Controlla se il linking è andato a buon fine
+
+    //Gestione dell'errore
+    if (!success) {
+        char log[512];
+        glGetProgramInfoLog(program, 512, nullptr, log);
+        cerr << "Errore di linking:\n" << log << std::endl;
+    }
+
+    //Pulizia degli shader singoli (non rimuove gli shader dal programma, ma li elimina dalla RAM quando non sono più utilizzati)
+    glDeleteShader(vertex);
+    glDeleteShader(tc);
+    glDeleteShader(te);
+    glDeleteShader(fragment);
+
+    return program; //Restituisce l'ID dello shader program
+}
+
 unsigned int createSimpleShaderProgram(const char* vs, const char* fs) {
     unsigned int vertex = compileShader(vs, GL_VERTEX_SHADER); //Vertex Shader
     unsigned int fragment = compileShader(fs, GL_FRAGMENT_SHADER); //Fragment Shader

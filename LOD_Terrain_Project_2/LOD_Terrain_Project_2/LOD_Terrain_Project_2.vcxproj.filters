@@ -102,6 +102,16 @@
     <None Include="tess_control_roofs.glsl" />
     <None Include="tess_eval_roofs.glsl" />
     <None Include="vertex_roofs.glsl" />
+    <None Include="vertex_lamps.glsl" />
+    <None Include="tess_control_lamps.glsl" />
+    <None Include="tess_eval_lamps.glsl" />
+    <None Include="geometry_lamps.glsl" />
+    <None Include="fragment_lamps.glsl" />
+    <None Include="fragment_sphere.glsl" />
+    <None Include="geometry_sphere.glsl" />
+    <None Include="tess_control_sphere.glsl" />
+    <None Include="tess_eval_sphere.glsl" />
+    <None Include="vertex_sphere.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="strutture.h">

@@ -6,7 +6,7 @@ layout(quads, equal_spacing, cw) in;
 
 uniform float SCALE;
 uniform mat4 model;
-uniform vec3 originalPoints[16];
+uniform vec3 originalPoints[8 * 6];
 
 uniform sampler2D texture1; //Displacement
 
@@ -59,7 +59,7 @@ vec3 getDisplacedPos(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 p3) {
     float epsilon = 0.001;
     bool onBlockBorder = false;
 
-    for (int i = 0; i < 16; ++i) {
+    for (int i = 0; i < 8 * 6; ++i) {
         if (sharesTwoComponents(pos, originalPoints[i], epsilon)) {
             onBlockBorder = true;
             break;

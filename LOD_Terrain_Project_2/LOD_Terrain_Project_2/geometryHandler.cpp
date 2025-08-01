@@ -107,47 +107,60 @@ vector<float> generatePatches(const vector<float>& plane, int division) {
 
 
 
-
-// --- SPHERES --- //
-vector<vec3> sphereCorners = {
-    vec3(0,  1,  0),
-    vec3(0,  -1,  0),
-    vec3(0, 0,  1),
-    vec3(0, 0,  -1),
-    vec3(1,  0, 0),
-    vec3(-1,  0, 0)
-};
-
-const int ottanteTriangles[8][3] = {
-    {0, 2, 4}, // Ottante 1
-    {0, 3, 4}, // Ottante 2
-    {0, 3, 5}, // Ottante 3
-    {0, 2, 5}, // Ottante 4
-    {1, 2, 4}, // Ottante 5
-    {1, 3, 4}, // Ottante 6
-    {1, 3, 5}, // Ottante 7
-    {1, 2, 5}  // Ottante 8
-};
-
-vector<vec3> generateSphericalBase(const vec3& center, float radius) {
+// SPHERES
+pair<vector<vec3>, vector<vec3>> generateSphericalBasesFromPositions(const vector<vec3>& basePositions) {
     vector<vec3> verts;
+    vector<vec3> centers;
 
-    for (int i = 0; i < 8; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            vec3 dir = normalize(sphereCorners[ottanteTriangles[i][j]]);
-            vec3 offset = dir * radius;
-            verts.push_back(center + offset);
+    // Generatore random e distribuzione per il raggio unico
+    static random_device rd;
+    static mt19937 gen(rd());
+    uniform_real_distribution<float> radiusDist(0.06f, 0.1f);
+
+    float radius = radiusDist(gen);  // scelgo un raggio casuale UNA VOLTA
+
+    // Definizione fissa degli angoli/sfera
+    vector<vec3> sphereCorners = {
+        vec3(0,  1,  0),
+        vec3(0,  -1,  0),
+        vec3(0, 0,  1),
+        vec3(0, 0,  -1),
+        vec3(1,  0, 0),
+        vec3(-1,  0, 0)
+    };
+
+    const int ottanteTriangles[8][3] = {
+        {0, 2, 4}, // Ottante 1
+        {0, 3, 4}, // Ottante 2
+        {0, 3, 5}, // Ottante 3
+        {0, 2, 5}, // Ottante 4
+        {1, 2, 4}, // Ottante 5
+        {1, 3, 4}, // Ottante 6
+        {1, 3, 5}, // Ottante 7
+        {1, 2, 5}  // Ottante 8
+    };
+
+    for (const vec3& topVertex : basePositions) {
+        vec3 center = topVertex - vec3(0, radius, 0);  // Calcolo centro
+
+        for (int i = 0; i < 8; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                vec3 dir = normalize(sphereCorners[ottanteTriangles[i][j]]);
+                vec3 offset = dir * radius;
+                verts.push_back(center + offset);
+                centers.push_back(center);
+            }
         }
     }
 
-    return verts;
+    return { verts, centers };
 }
 
 
 tuple<vector<float>, vector<float>, vector<vec3>> generateBlocks(const vector<vec3>& positions, int subdivisions, bool isHedge) {
     float baseSize = 1.0f;
-    float minHeight = isHedge ? 0.4f : 1.5f;
-    float maxHeight = isHedge ? 0.6f : 2.0f;
+    float minHeight = isHedge ? 0.4f : 1.0f;
+    float maxHeight = isHedge ? 0.6f : 2.5f;
 
     vector<float> blocks;
     vector<float> heights;
@@ -437,18 +450,17 @@ pair<vector<float>, vector<float>> generatePatchesFromRoofs(const vector<float>&
             // Calcolo normale con winding CW
             vec3 normal = normalize(cross(p3 - p0, p1 - p0));
 
-            // Optional: flip se necessario
-            vec3 center = (p0 + p2) * 0.5f;
-            
-            if (faceIndex == 4) {
-                if (normal.y > 0.0f) {
-                    normal = -normal;
-                }
+            // Flip base inferiore (deve puntare in basso)
+            if (faceIndex == 4 && normal.y > 0.0f) {
+                normal = -normal;
             }
-            else {
-                if (dot(normal, normalize(center)) < 0.0f) {
-                    normal = -normal;
-                }
+            // Flip base superiore (deve puntare in alto)
+            else if (faceIndex == 5 && normal.y < 0.0f) {
+                normal = -normal;
+            }
+            // Lati inclinati: punta verso l'esterno
+            else if (faceIndex >= 0 && faceIndex <= 3) {
+                normal = -normal;
             }
 
             // Inserimento vertici in ordine CW
@@ -468,3 +480,50 @@ pair<vector<float>, vector<float>> generatePatchesFromRoofs(const vector<float>&
 
     return { patches, faceNormals };
 }
+
+
+pair<vector<vec3>, vector<vec3>> generateLampLinesFromBases(const vector<vec3>& basePositions) {
+    vector<vec3> result;
+    vector<vec3> lightPositions;
+
+    // Generatore random
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_real_distribution<float> angleDist(0.0f, 2.0f * pi<float>());
+
+    // Altezza e larghezza costante per tutti i lampioni
+    float height = 1.3f;  // valore fisso
+    float width = 0.3f;
+    float halfWidth = width * 0.5f;
+
+    for (const vec3& base : basePositions) {
+        float angle = angleDist(gen); // orientamento casuale in piano XZ
+
+        // Funzione lambda per ruotare un offset attorno a Y
+        auto rotateY = [&](const vec3& offset) -> vec3 {
+            return vec3(
+                offset.x * cos(angle) + offset.z * sin(angle),
+                offset.y,
+                -offset.x * sin(angle) + offset.z * cos(angle)
+            );
+        };
+
+        vec3 baseLeft = base + rotateY(vec3(-halfWidth, 0.0f, 0.0f));
+        vec3 topLeft = base + rotateY(vec3(-halfWidth, height, 0.0f));
+        vec3 topRight = base + rotateY(vec3(halfWidth, height, 0.0f));
+        float shortLeg = height * 0.15f;
+        vec3 baseRight = base + rotateY(vec3(halfWidth, height - shortLeg, 0.0f));
+
+        // Curva 1: baseLeft - topLeft - topRight - baseRight
+        result.insert(result.end(), { baseLeft, topLeft, topRight, baseRight });
+        // Curva 2: topLeft - topRight - baseRight - baseRight
+        result.insert(result.end(), { topLeft, topRight, baseRight, baseRight });
+        // Curva 3: baseLeft - baseLeft - topLeft - topRight
+        result.insert(result.end(), { baseLeft, baseLeft, topLeft, topRight });
+
+        lightPositions.push_back(baseRight);
+    }
+
+    return { result, lightPositions };
+}
+

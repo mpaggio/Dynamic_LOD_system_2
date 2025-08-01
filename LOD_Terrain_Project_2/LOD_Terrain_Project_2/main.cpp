@@ -100,28 +100,36 @@ int main() {
 
 
     //PLANE
-    int division = 12;
-    float size = 5.0f;
+    float map_scale = 2.0;
+    int division = 12 * map_scale;
+    float size = 5.0f * map_scale;
     vector<float> terrainVertices = simplePlane(division, size);
     vector<float> terrainPatches = generatePatches(terrainVertices, division);
     BufferPair terrainPair = INIT_SIMPLE_VERTEX_BUFFERS(terrainPatches);
 
 
     //BLOCKS
-    int numHouses = 2;
-    int numHedges = 3;
+    int numHouses = 6;
+    int numHedges = 6;
+    int numLamps = 6;
     int houseSubdivision = 2;
-    auto positionData = generateNonOverlappingPositions(terrainVertices, division, size, numHouses, numHedges);
-    vector<vec3> housePositions = positionData.first;
-    vector<vec3> moldPositions = positionData.second;
+    auto positionData = generateNonOverlappingPositions(terrainVertices, division, numHouses, numHedges, numLamps);
+    vector<vec3> housePositions = get<0>(positionData);
+    vector<vec3> moldPositions = get<1>(positionData);
+    vector<vec3> lampPositions = get<2>(positionData);
     auto blocksData = generateBlocks(housePositions, houseSubdivision, false);
     vector<float> blocksVertices = get<0>(blocksData);
     vector<float> blocksHeights = get<1>(blocksData);
     vec3* blocksOriginalVertices = get<2>(blocksData).data();
     auto patchData = generatePatchesFromBlocks(blocksVertices, false);
     vector<float> blocksPatches = patchData.first;
+    vector<float> blocksPatchesA(blocksPatches.begin(), blocksPatches.begin() + blocksPatches.size() / 2);
+    vector<float> blocksPatchesB(blocksPatches.begin() + blocksPatches.size() / 2, blocksPatches.end());
     vector<float> blocksNormals = patchData.second;
-    BufferPair housesPair = INIT_HOUSE_BUFFERS(blocksPatches, blocksNormals);
+    vector<float> blocksNormalsA(blocksNormals.begin(), blocksNormals.begin() + blocksNormals.size() / 2);
+    vector<float> blocksNormalsB(blocksNormals.begin() + blocksNormals.size() / 2, blocksNormals.end());
+    BufferPair housesPairA = INIT_HOUSE_BUFFERS(blocksPatchesA, blocksNormalsA);
+    BufferPair housesPairB = INIT_HOUSE_BUFFERS(blocksPatchesB, blocksNormalsB);
 
 
     //ROOFS
@@ -144,6 +152,20 @@ int main() {
     vector<float> moldsPatches = moldPatchData.first;
     vector<float> moldsNormals = moldPatchData.second;
     BufferPair moldsPair = INIT_HOUSE_BUFFERS(moldsPatches, moldsNormals);
+
+
+    //LAMP
+    auto lampsData = generateLampLinesFromBases(lampPositions);
+    vector<vec3> lampVertices = lampsData.first;
+    vector<vec3> lightPositions = lampsData.second;
+    BufferPair lampPair = INIT_VEC3_BUFFERS(lampVertices);
+
+
+    //LAMP LIGHTS
+    auto lampLightsData = generateSphericalBasesFromPositions(lightPositions);
+    vector<vec3> lampLightsVertex = lampLightsData.first;
+    vector<vec3> lampLightsCenter = lampLightsData.second;
+    BufferPair lampLightsPair = INIT_SPHERE_BUFFERS(lampLightsVertex, lampLightsCenter);
 
 
     //SHADER PROGRAMS
@@ -169,6 +191,13 @@ int main() {
         "geometry_houses.glsl",
         "fragment_houses.glsl"
     );
+    unsigned int housesProgram2 = createShaderProgram(
+        "vertex_houses.glsl",
+        "tess_control_houses.glsl",
+        "tess_eval_houses.glsl",
+        "geometry_houses.glsl",
+        "fragment_houses.glsl"
+    );
     unsigned int roofProgram = createShaderProgram(
         "vertex_roofs.glsl",
         "tess_control_roofs.glsl",
@@ -183,6 +212,20 @@ int main() {
         "geometry_houses.glsl",
         "fragment_houses.glsl"
     );
+    unsigned int lampProgram = createShaderProgram(
+        "vertex_lamps.glsl",
+        "tess_control_lamps.glsl",
+        "tess_eval_lamps.glsl",
+        "geometry_lamps.glsl",
+        "fragment_lamps.glsl"
+    );
+    unsigned int lampLightProgram = createShaderProgram(
+        "vertex_sphere.glsl",
+        "tess_control_sphere.glsl",
+        "tess_eval_sphere.glsl",
+        "geometry_sphere.glsl",
+        "fragment_sphere.glsl"
+    );
     
 
     //TEXTURES
@@ -196,6 +239,10 @@ int main() {
         "Texture/House/Color.png",
         "Texture/House/Displacement.png"
     });
+    vector<GLuint>houseTextures2 = loadAllTextures({
+        "Texture/House/Color_2.png",
+        "Texture/House/Displacement_2.png"
+        });
     vector<GLuint>roofTextures = loadAllTextures({
         "Texture/Roof/Color.png",
         "Texture/Roof/Displacement.png"
@@ -229,6 +276,18 @@ int main() {
     int lightPowerLocTerrain_houses = glGetUniformLocation(housesProgram, "light.power");
     int originalVerticesLoc_houses = glGetUniformLocation(housesProgram, "originalPoints");
     int scaleLoc_houses = glGetUniformLocation(housesProgram, "SCALE");
+    //Houses program 2
+    int modelLoc_houses2 = glGetUniformLocation(housesProgram2, "model");
+    int viewLoc_houses2 = glGetUniformLocation(housesProgram2, "view");
+    int projLoc_houses2 = glGetUniformLocation(housesProgram2, "proj");
+    int cameraPositionLocation_houses2 = glGetUniformLocation(housesProgram2, "cameraPosition");
+    int characterPositionLocation_houses2 = glGetUniformLocation(housesProgram2, "characterPosition");
+    int useCharacterToTessLocation_houses2 = glGetUniformLocation(housesProgram2, "useCharacterToTess");
+    int lightPosLocTerrain_houses2 = glGetUniformLocation(housesProgram2, "light.position");
+    int lightColorLocTerrain_houses2 = glGetUniformLocation(housesProgram2, "light.color");
+    int lightPowerLocTerrain_houses2 = glGetUniformLocation(housesProgram2, "light.power");
+    int originalVerticesLoc_houses2 = glGetUniformLocation(housesProgram2, "originalPoints");
+    int scaleLoc_houses2 = glGetUniformLocation(housesProgram2, "SCALE");
     //Roofs program
     int modelLoc_roofs = glGetUniformLocation(roofProgram, "model");
     int viewLoc_roofs = glGetUniformLocation(roofProgram, "view");
@@ -252,6 +311,28 @@ int main() {
     int lightPowerLocTerrain_molds = glGetUniformLocation(moldsProgram, "light.power");
     int originalVerticesLoc_molds = glGetUniformLocation(moldsProgram, "originalPoints");
     int scaleLoc_molds = glGetUniformLocation(moldsProgram, "SCALE");
+    //Lamps program
+    int model_lamps = glGetUniformLocation(lampProgram, "model");
+    int view_lamps = glGetUniformLocation(lampProgram, "view");
+    int proj_lamps = glGetUniformLocation(lampProgram, "proj");
+    int cameraPosition_lamps = glGetUniformLocation(lampProgram, "cameraPosition");
+    int characterPosition_lamps = glGetUniformLocation(lampProgram, "characterPosition");
+    int useCharacterToTess_lamps = glGetUniformLocation(lampProgram, "useCharacterToTess");
+    int lightPos_lamps = glGetUniformLocation(lampProgram, "light.position");
+    int lightColor_lamps = glGetUniformLocation(lampProgram, "light.color");
+    int lightPower_lamps = glGetUniformLocation(lampProgram, "light.power");
+    int viewPos_lamps = glGetUniformLocation(lampProgram, "ViewPos");
+    //Lamps light program
+    int model_lampsLight = glGetUniformLocation(lampLightProgram, "model");
+    int view_lampsLight = glGetUniformLocation(lampLightProgram, "view");
+    int proj_lampsLight = glGetUniformLocation(lampLightProgram, "proj");
+    int cameraPosition_lampsLight = glGetUniformLocation(lampLightProgram, "cameraPosition");
+    int characterPosition_lampsLight = glGetUniformLocation(lampLightProgram, "characterPosition");
+    int useCharacterToTess_lampsLight = glGetUniformLocation(lampLightProgram, "useCharacterToTess");
+    int lightPos_lampsLight = glGetUniformLocation(lampLightProgram, "light.position");
+    int lightColor_lampsLight = glGetUniformLocation(lampLightProgram, "light.color");
+    int lightPower_lampsLight = glGetUniformLocation(lampLightProgram, "light.power");
+    int viewPos_lampsLight = glGetUniformLocation(lampLightProgram, "ViewPos");
     //Model program
     int modelLoc = glGetUniformLocation(modelProgram, "model");
     int viewLoc = glGetUniformLocation(modelProgram, "view");
@@ -448,11 +529,41 @@ int main() {
         glUniform3fv(lightPosLocTerrain_houses, 1, value_ptr(light.position));
         glUniform3fv(lightColorLocTerrain_houses, 1, value_ptr(light.color));
         glUniform1f(lightPowerLocTerrain_houses, light.power);
-        glUniform3fv(originalVerticesLoc_houses, 16, reinterpret_cast<const float*>(blocksOriginalVertices));
+        glUniform3fv(originalVerticesLoc_houses, 8 * numHouses, reinterpret_cast<const float*>(blocksOriginalVertices));
         glUniform1f(scaleLoc_houses, 0.04f);
 
-        glBindVertexArray(housesPair.vao);
-        glDrawArrays(GL_PATCHES, 0, blocksPatches.size() / 3);
+        glBindVertexArray(housesPairA.vao);
+        glDrawArrays(GL_PATCHES, 0, blocksPatchesA.size() / 3);
+
+
+        //HOUSES PROGRAM
+        glUseProgram(housesProgram2);
+
+        for (int i = 0; i < houseTextures2.size(); i++) { //Attiva le texture
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, houseTextures2[i]);
+        }
+        //Lega le texture alle relative variabili uniform
+        for (int i = 0; i < houseTextures2.size(); i++) {
+            string uniformName = "texture" + std::to_string(i);
+            GLint location = glGetUniformLocation(housesProgram2, uniformName.c_str());
+            glUniform1i(location, i);
+        }
+
+        glUniform1i(useCharacterToTessLocation_houses2, int(mainCharacter));
+        glUniformMatrix4fv(modelLoc_houses2, 1, GL_FALSE, value_ptr(model));
+        glUniformMatrix4fv(viewLoc_houses2, 1, GL_FALSE, value_ptr(view));
+        glUniformMatrix4fv(projLoc_houses2, 1, GL_FALSE, value_ptr(proj));
+        glUniform3fv(cameraPositionLocation_houses2, 1, value_ptr(SetupTelecamera.position));
+        glUniform3fv(characterPositionLocation_houses2, 1, value_ptr(modelWorldPos));
+        glUniform3fv(lightPosLocTerrain_houses2, 1, value_ptr(light.position));
+        glUniform3fv(lightColorLocTerrain_houses2, 1, value_ptr(light.color));
+        glUniform1f(lightPowerLocTerrain_houses2, light.power);
+        glUniform3fv(originalVerticesLoc_houses2, 8 * numHouses, reinterpret_cast<const float*>(blocksOriginalVertices));
+        glUniform1f(scaleLoc_houses2, 0.04f);
+
+        glBindVertexArray(housesPairB.vao);
+        glDrawArrays(GL_PATCHES, 0, blocksPatchesB.size() / 3);
 
 
         //ROOFS PROGRAM
@@ -478,7 +589,7 @@ int main() {
         glUniform3fv(lightPosLocTerrain_roofs, 1, value_ptr(light.position));
         glUniform3fv(lightColorLocTerrain_roofs, 1, value_ptr(light.color));
         glUniform1f(lightPowerLocTerrain_roofs, light.power);
-        glUniform3fv(originalVerticesLoc_roofs, 16, reinterpret_cast<const float*>(roofsOriginalVertices));
+        glUniform3fv(originalVerticesLoc_roofs, 8 * numHouses, reinterpret_cast<const float*>(roofsOriginalVertices));
 
         glBindVertexArray(roofPair.vao);
         glDrawArrays(GL_PATCHES, 0, roofsPatches.size() / 3);
@@ -507,11 +618,50 @@ int main() {
         glUniform3fv(lightPosLocTerrain_molds, 1, value_ptr(light.position));
         glUniform3fv(lightColorLocTerrain_molds, 1, value_ptr(light.color));
         glUniform1f(lightPowerLocTerrain_molds, light.power);
-        glUniform3fv(originalVerticesLoc_molds, 16, reinterpret_cast<const float*>(moldsOriginalVertices));
+        glUniform3fv(originalVerticesLoc_molds, 8 * numHedges , reinterpret_cast<const float*>(moldsOriginalVertices));
         glUniform1f(scaleLoc_molds, 0.02f);
 
         glBindVertexArray(moldsPair.vao);
         glDrawArrays(GL_PATCHES, 0, moldsPatches.size() / 3);
+
+
+        //LAMPS PROGRAM
+        glUseProgram(lampProgram);
+
+        glUniformMatrix4fv(model_lamps, 1, GL_FALSE, value_ptr(model));
+        glUniformMatrix4fv(view_lamps, 1, GL_FALSE, value_ptr(view));
+        glUniformMatrix4fv(proj_lamps, 1, GL_FALSE, value_ptr(proj));
+        glUniform3fv(cameraPosition_lamps, 1, value_ptr(SetupTelecamera.position));
+        glUniform3fv(characterPosition_lamps, 1, value_ptr(modelWorldPos));
+        glUniform1i(useCharacterToTess_lamps, int(mainCharacter));
+        glUniform3fv(lightPos_lamps, 1, value_ptr(light.position));
+        glUniform3fv(lightColor_lamps, 1, value_ptr(light.color));
+        glUniform1f(lightPower_lamps, light.power);
+        glUniform3fv(viewPos_lamps, 1, value_ptr(SetupTelecamera.position));
+
+        glBindVertexArray(lampPair.vao);
+        glDrawArrays(GL_PATCHES, 0, lampVertices.size());
+
+        glPatchParameteri(GL_PATCH_VERTICES, 3);
+
+        //LAMPS LIGHT PROGRAM
+        glUseProgram(lampLightProgram);
+
+        glUniformMatrix4fv(model_lampsLight, 1, GL_FALSE, value_ptr(model));
+        glUniformMatrix4fv(view_lampsLight, 1, GL_FALSE, value_ptr(view));
+        glUniformMatrix4fv(proj_lampsLight, 1, GL_FALSE, value_ptr(proj));
+        glUniform3fv(cameraPosition_lampsLight, 1, value_ptr(SetupTelecamera.position));
+        glUniform3fv(characterPosition_lampsLight, 1, value_ptr(modelWorldPos));
+        glUniform1i(useCharacterToTess_lampsLight, int(mainCharacter));
+        glUniform3fv(lightPos_lampsLight, 1, value_ptr(light.position));
+        glUniform3fv(lightColor_lampsLight, 1, value_ptr(light.color));
+        glUniform1f(lightPower_lampsLight, light.power);
+        glUniform3fv(viewPos_lampsLight, 1, value_ptr(SetupTelecamera.position));
+
+        glBindVertexArray(lampLightsPair.vao);
+        glDrawArrays(GL_PATCHES, 0, lampLightsVertex.size());
+        
+
 
         renderGui();
         glfwSwapBuffers(window); //Scambia il buffer frontale con quello posteriore

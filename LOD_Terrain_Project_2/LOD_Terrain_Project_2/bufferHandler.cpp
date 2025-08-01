@@ -8,6 +8,25 @@ extern vector<unsigned int> indices;
 extern vector<BoneInfo> bone_info; 
 extern vector<VertexBoneData> vertices_to_bones; 
 
+BufferPair INIT_VEC3_BUFFERS(const vector<vec3>& vertices) {
+    BufferPair pair;
+
+    glGenVertexArrays(1, &pair.vao);
+    glGenBuffers(1, &pair.vbo);
+
+    glBindVertexArray(pair.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, pair.vbo);
+
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vec3), vertices.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
+
+    return pair;
+}
+
 BufferPair INIT_SIMPLE_VERTEX_BUFFERS(vector<float> vertices) {
 	BufferPair pair;
 
@@ -47,6 +66,34 @@ BufferPair INIT_HOUSE_BUFFERS(vector<float> vertices, vector<float> normals) {
 
     glEnableVertexAttribArray(1); // Centro: location 1
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    glBindVertexArray(0); // Unbind VAO
+
+    return pair;
+}
+
+BufferPair INIT_SPHERE_BUFFERS(const vector<vec3>& vertices, const vector<vec3>& centers) {
+    BufferPair pair;
+
+    glGenVertexArrays(1, &pair.vao);
+    glBindVertexArray(pair.vao);
+
+    // --- VBO per le posizioni ---
+    glGenBuffers(1, &pair.vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, pair.vbo);
+    // Passa dati raw di vec3 (3 float contigui)
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vec3), vertices.data(), GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0); // Posizione: location 0
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)0);
+
+    // --- VBO per i centri ---
+    glGenBuffers(1, &pair.centerVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, pair.centerVBO);
+    glBufferData(GL_ARRAY_BUFFER, centers.size() * sizeof(vec3), centers.data(), GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(1); // Centro: location 1
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)0);
 
     glBindVertexArray(0); // Unbind VAO
 

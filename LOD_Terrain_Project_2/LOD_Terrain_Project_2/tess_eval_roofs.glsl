@@ -6,7 +6,7 @@ layout(quads, equal_spacing, cw) in;
 const float SCALE = 0.02;
 
 uniform mat4 model;
-uniform vec3 originalPoints[16]; // 16 vertici: 2 tronchi di piramide da 8 vertici ciascuno
+uniform vec3 originalPoints[8*6];
 
 uniform sampler2D texture1; // Displacement map
 
@@ -85,7 +85,7 @@ vec3 getDisplacedPos(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 p3) {
         );
 
     // Controlla per entrambi i tronchi di piramide
-    for (int trunk = 0; trunk < 2; ++trunk) {
+    for (int trunk = 0; trunk < 6; ++trunk) {
         int baseIndex = trunk * 8;
 
         for (int i = 0; i < 24; i += 2) {
