@@ -46,7 +46,7 @@ void renderGui() {
 
     ImGui::Checkbox("Abilita personaggio", &mainCharacter);
 
-    ImGui::SliderFloat("Character speed", &moveSpeed, 0.001f, 0.005f);
+    ImGui::SliderFloat("Character speed", &moveSpeed, 0.01f, 0.05f);
 
     ImGui::End();
 

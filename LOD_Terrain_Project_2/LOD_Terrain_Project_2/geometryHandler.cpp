@@ -72,37 +72,98 @@ vector<float> simplePlane(int division, float width) {
 
 
 
-// --- PLANE PATCHES --- //
-vector<float> generatePatches(const vector<float>& plane, int division) {
-    vector<float> patches;
-    int rowLength = division + 1;
+// --- ROAD AND GRASS --- //
+pair<vector<float>, vector<bool>> roadAndGrass(int division, float width, int roadWidth) {
+    vector<float> vertices;
+    vector<bool> isRoad;
 
-    for (int row = 0; row < division; ++row) {
-        for (int col = 0; col < division; ++col) {
-            int v0 = ((row + 1) * rowLength + col) * 3;       // bottom-left
-            int v1 = ((row + 1) * rowLength + col + 1) * 3;   // bottom-right
-            int v2 = (row * rowLength + col + 1) * 3;         // top-right
-            int v3 = (row * rowLength + col) * 3;             // top-left
+    float cellSize = width / division;
+    int center = division / 2; // indice centrale
 
-            patches.push_back(plane[v0]);
-            patches.push_back(plane[v0 + 1]);
-            patches.push_back(plane[v0 + 2]);
+    for (int row = 0; row <= division; row++) {
+        for (int col = 0; col <= division; col++) {
+            vec3 vertex = vec3(col * cellSize, 0.0f, row * -cellSize);
 
-            patches.push_back(plane[v1]);
-            patches.push_back(plane[v1 + 1]);
-            patches.push_back(plane[v1 + 2]);
+            // Definisco la croce centrale con larghezza roadWidth
+            bool isRoadCell = (col >= center - roadWidth / 2 && col <= center + roadWidth / 2) ||
+                (row >= center - roadWidth / 2 && row <= center + roadWidth / 2);
 
-            patches.push_back(plane[v2]);
-            patches.push_back(plane[v2 + 1]);
-            patches.push_back(plane[v2 + 2]);
+            vertices.push_back(vertex.x);
+            vertices.push_back(vertex.z);
+            vertices.push_back(vertex.y);
 
-            patches.push_back(plane[v3]);
-            patches.push_back(plane[v3 + 1]);
-            patches.push_back(plane[v3 + 2]);
+            isRoad.push_back(isRoadCell);
         }
     }
 
-    return patches;
+    return { vertices, isRoad };
+}
+
+
+
+
+
+
+// --- PLANE PATCHES --- //
+tuple<vector<float>, vector<vec4>, vector<float>, vector<vec4>> generatePatches(const vector<float>& plane, const vector<bool>& isRoad, int division) {
+    vector<float> roadPatches;
+    vector<vec4> roadEdges; // x(top), y(right), z(bottom), w(left)
+    vector<float> grassPatches; 
+    vector<vec4> grassEdges; // x(top), y(right), z(bottom), w(left)
+
+    int rowLength = division + 1;
+
+    auto getPatchFlag = [&](int row, int col) -> vec4 {
+        bool top = false, right = false, bottom = false, left = false;
+        bool selfRoad = isRoad[row * (division + 1) + col];
+        bool targetNeighbor = !selfRoad;
+
+        // Controlla sopra (top)
+        if (row > 0 && isRoad[(row - 1) * (division + 1) + col] == targetNeighbor)
+            top = true;
+        // Controlla destra (right)
+        if (col < division - 1 && isRoad[row * (division + 1) + (col + 1)] == targetNeighbor)
+            right = true;
+        // Controlla sotto (bottom)
+        if (row < division - 1 && isRoad[(row + 1) * (division + 1) + col] == targetNeighbor)
+            bottom = true;
+        // Controlla sinistra (left)
+        if (col > 0 && isRoad[row * (division + 1) + (col - 1)] == targetNeighbor)
+            left = true;
+        
+        return vec4(
+            top ? 1.0f : 0.0f,
+            right ? 1.0f : 0.0f,
+            bottom ? 1.0f : 0.0f,
+            left ? 1.0f : 0.0f
+        );
+    };
+
+    for (int row = 0; row < division; ++row) {
+        for (int col = 0; col < division; ++col) {
+            
+            int idx[4] = {
+                ((row + 1) * rowLength + col) * 3,       // bottom-left
+                ((row + 1) * rowLength + col + 1) * 3,   // bottom-right
+                (row * rowLength + col + 1) * 3,         // top-right
+                (row * rowLength + col) * 3              // top-left
+            };
+
+            bool patchIsRoad = isRoad[row * (division + 1) + col];
+            vec4 flag = getPatchFlag(row, col);
+
+            vector<vec4>& targetEdges = patchIsRoad ? roadEdges : grassEdges;
+            vector<float>& targetPatches = patchIsRoad ? roadPatches : grassPatches;
+
+            for (int i = 0; i < 4; ++i) {
+                targetEdges.push_back(flag);
+                targetPatches.push_back(plane[idx[i]]);
+                targetPatches.push_back(plane[idx[i] + 1]);
+                targetPatches.push_back(plane[idx[i] + 2]);
+            }
+        }
+    }
+    return { roadPatches, roadEdges, grassPatches, grassEdges};
 }
 
 
@@ -482,22 +543,20 @@ pair<vector<float>, vector<float>> generatePatchesFromRoofs(const vector<float>&
 }
 
 
-pair<vector<vec3>, vector<vec3>> generateLampLinesFromBases(const vector<vec3>& basePositions) {
+pair<vector<vec3>, vector<vec3>> generateLampLinesFromBases(const vector<vec3>& basePositions, const vector<vec3>& directions, vector<pair<vec3, vec3>>& verticalRods) {
     vector<vec3> result;
     vector<vec3> lightPositions;
-
-    // Generatore random
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_real_distribution<float> angleDist(0.0f, 2.0f * pi<float>());
 
     // Altezza e larghezza costante per tutti i lampioni
     float height = 1.3f;  // valore fisso
     float width = 0.3f;
     float halfWidth = width * 0.5f;
 
-    for (const vec3& base : basePositions) {
-        float angle = angleDist(gen); // orientamento casuale in piano XZ
+    for (size_t i = 0; i < basePositions.size(); ++i) {
+        const vec3& base = basePositions[i];
+        const vec3& dir = directions[i];
+
+        float angle = atan2(dir.x, dir.z);
 
         // Funzione lambda per ruotare un offset attorno a Y
         auto rotateY = [&](const vec3& offset) -> vec3 {
@@ -513,6 +572,9 @@ pair<vector<vec3>, vector<vec3>> generateLampLinesFromBases(const vector<vec3>& 
         vec3 topRight = base + rotateY(vec3(halfWidth, height, 0.0f));
         float shortLeg = height * 0.15f;
         vec3 baseRight = base + rotateY(vec3(halfWidth, height - shortLeg, 0.0f));
+
+        // Salvo asta verticale
+        verticalRods.push_back({ baseLeft, topLeft });
 
         // Curva 1: baseLeft - topLeft - topRight - baseRight
         result.insert(result.end(), { baseLeft, topLeft, topRight, baseRight });

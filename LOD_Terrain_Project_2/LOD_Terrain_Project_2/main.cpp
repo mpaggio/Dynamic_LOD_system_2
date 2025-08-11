@@ -16,7 +16,7 @@ int width = 600; //Larghezza della finestra
 
 float Theta = -90.0f; //Angolo per la rotazione orizzontale
 float Phi = 0.0f; //Angolo per la rotazione verticale
-float moveSpeed = 0.002;
+float moveSpeed = 0.02;
 long long startTimeMillis = 0;
 
 bool mouseLocked = true;
@@ -103,20 +103,27 @@ int main() {
     float map_scale = 2.0;
     int division = 12 * map_scale;
     float size = 5.0f * map_scale;
-    vector<float> terrainVertices = simplePlane(division, size);
-    vector<float> terrainPatches = generatePatches(terrainVertices, division);
-    BufferPair terrainPair = INIT_SIMPLE_VERTEX_BUFFERS(terrainPatches);
+    auto planeData = roadAndGrass(division, size, 4);
+    vector<float> terrainVertices = planeData.first;
+    vector<bool> isRoad = planeData.second;
+    auto terrainPatches = generatePatches(terrainVertices, isRoad, division);
+    vector<float> roadPatches = get<0>(terrainPatches);
+    vector<vec4> roadEdges = get<1>(terrainPatches);
+    vector<float> grassPatches = get<2>(terrainPatches);
+    vector<vec4> grassEdges = get<3>(terrainPatches);
+    BufferPair roadPair = INIT_DISPLACEMENT_BUFFERS(roadPatches, roadEdges);
+    BufferPair grassPair = INIT_DISPLACEMENT_BUFFERS(grassPatches, grassEdges);
 
 
     //BLOCKS
     int numHouses = 6;
     int numHedges = 6;
-    int numLamps = 6;
     int houseSubdivision = 2;
-    auto positionData = generateNonOverlappingPositions(terrainVertices, division, numHouses, numHedges, numLamps);
+    auto positionData = generateCityPositions(terrainVertices, isRoad, division, numHouses, numHedges, size);
     vector<vec3> housePositions = get<0>(positionData);
     vector<vec3> moldPositions = get<1>(positionData);
     vector<vec3> lampPositions = get<2>(positionData);
+    vector<vec3> lampDirections = get<3>(positionData);
     auto blocksData = generateBlocks(housePositions, houseSubdivision, false);
     vector<float> blocksVertices = get<0>(blocksData);
     vector<float> blocksHeights = get<1>(blocksData);
@@ -130,6 +137,17 @@ int main() {
     vector<float> blocksNormalsB(blocksNormals.begin() + blocksNormals.size() / 2, blocksNormals.end());
     BufferPair housesPairA = INIT_HOUSE_BUFFERS(blocksPatchesA, blocksNormalsA);
     BufferPair housesPairB = INIT_HOUSE_BUFFERS(blocksPatchesB, blocksNormalsB);
+    
+    vector<pair<vec3, vec3>> bvHouses;
+    int floatsPerHouse = blocksVertices.size() / numHouses;
+    for (int i = 0; i < numHouses; ++i) {
+        int startVertex = i * floatsPerHouse;
+        int endVertex = startVertex + floatsPerHouse;
+
+        vector<float> singleHouseVertices(blocksVertices.begin() + startVertex, blocksVertices.begin() + endVertex);
+        bvHouses.push_back(getBoundingBox(singleHouseVertices));
+    }
+    
 
 
     //ROOFS
@@ -140,6 +158,16 @@ int main() {
     vector<float> roofsPatches = roofsPatchData.first;
     vector<float> roofsNormals = roofsPatchData.second;
     BufferPair roofPair = INIT_HOUSE_BUFFERS(roofsPatches, roofsNormals);
+    
+    vector<pair<vec3, vec3>> bvRoofs;
+    int floatsPerRoof = roofsVertices.size() / numHouses;
+    for (int i = 0; i < numHouses; ++i) {
+        int startVertex = i * floatsPerRoof;
+        int endVertex = startVertex + floatsPerRoof;
+
+        vector<float> singleRoofVertices(roofsVertices.begin() + startVertex, roofsVertices.begin() + endVertex);
+        bvRoofs.push_back(getBoundingBox(singleRoofVertices));
+    }
 
 
     //MOLDS
@@ -153,12 +181,30 @@ int main() {
     vector<float> moldsNormals = moldPatchData.second;
     BufferPair moldsPair = INIT_HOUSE_BUFFERS(moldsPatches, moldsNormals);
 
+    vector<pair<vec3, vec3>> bvMolds;
+    int floatsPerMold = moldsVertices.size() / numHedges;
+    for (int i = 0; i < numHedges; ++i) {
+        int startVertex = i * floatsPerMold;
+        int endVertex = startVertex + floatsPerMold;
+
+        vector<float> singleMoldVertices(moldsVertices.begin() + startVertex, moldsVertices.begin() + endVertex);
+        bvMolds.push_back(getBoundingBox(singleMoldVertices));
+    }
+
 
     //LAMP
-    auto lampsData = generateLampLinesFromBases(lampPositions);
+    int numLamps = lampPositions.size();
+    vector<pair<vec3, vec3>> verticalRods;
+    auto lampsData = generateLampLinesFromBases(lampPositions, lampDirections, verticalRods);
     vector<vec3> lampVertices = lampsData.first;
     vector<vec3> lightPositions = lampsData.second;
     BufferPair lampPair = INIT_VEC3_BUFFERS(lampVertices);
+    
+    vector<pair<vec3, vec3>> bvLamps;
+    for (auto& rod : verticalRods) {
+        vector<vec3> rodVertices = { rod.first, rod.second };
+        bvLamps.push_back(getBoundingBox(rodVertices));
+    }
 
 
     //LAMP LIGHTS
@@ -234,6 +280,10 @@ int main() {
     vector<GLuint> terrainTextures = loadAllTextures({
         "Texture/Terrain/Color_3.png",
         "Texture/Terrain/Displacement_3.png"
+    });
+    vector<GLuint> grassTextures = loadAllTextures({
+        "Texture/Grass/Color_3.png",
+        "Texture/Grass/Displacement_3.png"
     });
     vector<GLuint>houseTextures = loadAllTextures({
         "Texture/House/Color.png",
@@ -368,7 +418,7 @@ int main() {
     //MODEL MOVEMENT
     vec3 modelMovement = vec3(0.0f);
     vec3 previousModelMovement = vec3(0.0f);
-    vec3 modelWorldPos = vec3(0.0f); //posizione assoluta del modello in world space
+    vec3 modelWorldPos = vec3(5.0f, 0.0f, 0.0f); //posizione assoluta del modello in world space
     float rotationAngle = 0.0f;
 
 
@@ -476,9 +526,9 @@ int main() {
         glBindVertexArray(0);
         glDepthMask(GL_TRUE);         // riattiva scrittura per gli oggetti normali
         glDepthFunc(GL_LESS);         // ripristina depth test standard
+ 
 
-
-        //TERRAIN PROGRAM
+        //TERRAIN PROGRAM (1)
         glUseProgram(terrainProgram);
 
         for (int i = 0; i < terrainTextures.size(); i++) { //Attiva le texture
@@ -502,7 +552,35 @@ int main() {
         glUniform3fv(lightColorLocTerrain, 1, value_ptr(light.color));
         glUniform1f(lightPowerLocTerrain, light.power);
         
-        glBindVertexArray(terrainPair.vao);
+        glBindVertexArray(roadPair.vao);
+        glDrawArrays(GL_PATCHES, 0, division * division * 4);
+
+
+        //TERRAIN PROGRAM (2)
+        glUseProgram(terrainProgram);
+
+        for (int i = 0; i < grassTextures.size(); i++) { //Attiva le texture
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, grassTextures[i]);
+        }
+        //Lega le texture alle relative variabili uniform
+        for (int i = 0; i < grassTextures.size(); i++) {
+            string uniformName = "texture" + std::to_string(i);
+            GLint location = glGetUniformLocation(terrainProgram, uniformName.c_str());
+            glUniform1i(location, i);
+        }
+
+        glUniform1i(useCharacterToTessLocation, int(mainCharacter));
+        glUniformMatrix4fv(modelLoc_terrain, 1, GL_FALSE, value_ptr(model));
+        glUniformMatrix4fv(viewLoc_terrain, 1, GL_FALSE, value_ptr(view));
+        glUniformMatrix4fv(projLoc_terrain, 1, GL_FALSE, value_ptr(proj));
+        glUniform3fv(cameraPositionLocation, 1, value_ptr(SetupTelecamera.position));
+        glUniform3fv(characterPositionLocation, 1, value_ptr(modelWorldPos));
+        glUniform3fv(lightPosLocTerrain, 1, value_ptr(light.position));
+        glUniform3fv(lightColorLocTerrain, 1, value_ptr(light.color));
+        glUniform1f(lightPowerLocTerrain, light.power);
+
+        glBindVertexArray(grassPair.vao);
         glDrawArrays(GL_PATCHES, 0, division * division * 4);
 
 
@@ -623,7 +701,7 @@ int main() {
 
         glBindVertexArray(moldsPair.vao);
         glDrawArrays(GL_PATCHES, 0, moldsPatches.size() / 3);
-
+        
 
         //LAMPS PROGRAM
         glUseProgram(lampProgram);
@@ -660,7 +738,6 @@ int main() {
 
         glBindVertexArray(lampLightsPair.vao);
         glDrawArrays(GL_PATCHES, 0, lampLightsVertex.size());
-        
 
 
         renderGui();
@@ -675,9 +752,36 @@ int main() {
         auto inputResult = process_input(window);
         previousModelMovement = modelMovement;
         if (length(inputResult.first) > 0.0001f) {
-            modelMovement += inputResult.first;
-            modelWorldPos += inputResult.first;
-            rotationAngle = inputResult.second;
+            bool collision = false;
+            for (auto bv : bvHouses) {
+                if (checkCollision(modelWorldPos + inputResult.first, bv.first, bv.second)) {
+                    collision = true;
+                }
+            }
+
+            for (auto bv : bvRoofs) {
+                if (checkCollision(modelWorldPos + inputResult.first, bv.first, bv.second)) {
+                    collision = true;
+                }
+            }
+
+            for (auto bv : bvMolds) {
+                if (checkCollision(modelWorldPos + inputResult.first, bv.first, bv.second)) {
+                    collision = true;
+                }
+            }
+
+            for (auto bv : bvLamps) {
+                if (checkCollision(modelWorldPos + inputResult.first, bv.first, bv.second)) {
+                    collision = true;
+                }
+            }
+
+            if (!collision) {
+                modelMovement += inputResult.first;
+                modelWorldPos += inputResult.first;
+                rotationAngle = inputResult.second;
+            }
         }
     }
 

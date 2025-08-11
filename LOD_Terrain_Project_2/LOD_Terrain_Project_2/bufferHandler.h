@@ -3,6 +3,7 @@
 #include "strutture.h"
 
 BufferPair INIT_VEC3_BUFFERS(const vector<vec3>& vertices);
+BufferPair INIT_DISPLACEMENT_BUFFERS(vector<float> vertices, vector<vec4> edges);
 BufferPair INIT_SIMPLE_VERTEX_BUFFERS(vector<float> planeVertices);
 BufferPair INIT_HOUSE_BUFFERS(vector<float> vertices, vector<float> centers);
 BufferPair INIT_SPHERE_BUFFERS(const vector<vec3>& vertices, const vector<vec3>& centers);

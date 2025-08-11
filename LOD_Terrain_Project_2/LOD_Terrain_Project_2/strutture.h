@@ -67,6 +67,7 @@ typedef struct{
     unsigned int vao;
     unsigned int vbo;
     unsigned int centerVBO;
+    unsigned int displaceVBO;
 } BufferPair;
 
 typedef struct {

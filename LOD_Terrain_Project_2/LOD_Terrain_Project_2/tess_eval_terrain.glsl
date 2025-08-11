@@ -10,19 +10,37 @@ uniform mat4 model;
 
 uniform sampler2D texture1; //Displacement
 
+in vec4 tcDisplace[];
+
 out vec4 worldPos;
 out vec3 normalTES;
 out vec2 tesUV;
 
-
 vec3 getDisplacedPos(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 p3) {
     float u = uv.x;
     float v = uv.y;
+
     vec3 pos = ((1.0 - u) * (1.0 - v) * p0)
         + (u * (1.0 - v) * p1)
         + (u * v * p2)
         + ((1.0 - u) * v * p3);
+    
     float height = texture(texture1, uv).r;
+    float epsilon = 0.001;
+
+    bool onLeft = abs(uv.x) < epsilon;
+    bool onBottom = abs(uv.y) < epsilon;
+    bool onRight = abs(uv.x - 1.0) < epsilon;
+    bool onTop = abs(uv.y - 1.0) < epsilon;
+
+    if ((onTop && tcDisplace[0].x == 1.0f) || (onRight && tcDisplace[0].y == 1.0f) || (onBottom && tcDisplace[0].z == 1.0f) || (onLeft && tcDisplace[0].w == 1.0f)) {
+        height = 0.0f;
+    }
+
+    if ((onLeft && onBottom) || (onLeft && onTop) || (onRight && onBottom) || (onRight && onTop)) {
+        height = 0.0f;
+    }
+    
     return pos + vec3(0.0, height * SCALE, 0.0);
 }
 

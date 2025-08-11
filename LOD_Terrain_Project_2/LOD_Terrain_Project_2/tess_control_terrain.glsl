@@ -13,8 +13,13 @@ const int MAX_TES = 44;
 const float MIN_DIST = 1.0;
 const float MAX_DIST = 1.5;
 
+in vec4 vDisplace[];
+
+out vec4 tcDisplace[];
+
 void main() {
-    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position; 
+    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+    tcDisplace[gl_InvocationID] = vDisplace[gl_InvocationID];
 
     if (gl_InvocationID == 0) {
 

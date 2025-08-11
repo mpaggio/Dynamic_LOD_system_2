@@ -45,6 +45,33 @@ BufferPair INIT_SIMPLE_VERTEX_BUFFERS(vector<float> vertices) {
 	return pair;
 }
 
+BufferPair INIT_DISPLACEMENT_BUFFERS(vector<float> vertices, vector<vec4> edges) {
+    BufferPair pair;
+
+    glGenVertexArrays(1, &pair.vao);
+    glBindVertexArray(pair.vao);
+
+    // --- VBO per le posizioni ---
+    glGenBuffers(1, &pair.vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, pair.vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // --- VBO per i displacement (vec2) ---
+    glGenBuffers(1, &pair.displaceVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, pair.displaceVBO);
+    glBufferData(GL_ARRAY_BUFFER, edges.size() * sizeof(vec4), edges.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), (void*)0);
+    glEnableVertexAttribArray(1);
+
+    // Pulizia binding
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    return pair;
+}
+
 BufferPair INIT_HOUSE_BUFFERS(vector<float> vertices, vector<float> normals) {
 	BufferPair pair;
 
