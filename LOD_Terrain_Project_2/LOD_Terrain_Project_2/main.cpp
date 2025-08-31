@@ -35,9 +35,6 @@ extern const aiScene* scene_walking;
 extern const aiScene* scene_standing;
 
 int main() {
-    mat4 model = mat4(1.0f); //(Nessuna trasformazione) --> Qui potrei scalare, ruotare o traslare 
-    mat4 view = lookAt(vec3(0.0f, 0.0f, 2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f)); //(Davanti all'origine)
-    mat4 proj = perspective(radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f); //(FOV: 45, ASPECT: 4.3, ZNEAR: 0.1, ZFAR: 100)
     
     //GLFW
     glfwInit(); //Inizializzazione di GLFW
@@ -72,6 +69,14 @@ int main() {
         std::cerr << "Errore nell'inizializzazione di GLAD\n";
         return -1;
     }
+
+
+    //TELECAMERA
+    INIT_CAMERA_PROJECTION();
+
+    mat4 model = mat4(1.0f); //(Nessuna trasformazione) --> Qui potrei scalare, ruotare o traslare 
+    mat4 view = lookAt(SetupTelecamera.position, SetupTelecamera.target, SetupTelecamera.upVector);
+    mat4 proj = perspective(radians(SetupProspettiva.fovY), SetupProspettiva.aspect, SetupProspettiva.near_plane, SetupProspettiva.far_plane);
 
 
     //ILLUMINAZIONE
@@ -401,10 +406,6 @@ int main() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Imposta la modalità Wireframe per vedere le suddivisioni fatte dallo shader
     glDisable(GL_CULL_FACE); //Disabilita il culling
     glEnable(GL_DEPTH_TEST); //Abilita il depth test
-
-
-    //TELECAMERA
-    INIT_CAMERA_PROJECTION();
 
 
     //GUI

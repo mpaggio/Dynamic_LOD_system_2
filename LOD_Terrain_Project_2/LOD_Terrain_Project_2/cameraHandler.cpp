@@ -9,7 +9,7 @@ extern PerspectiveSetup SetupProspettiva;
 
 void INIT_CAMERA_PROJECTION(void) {
     //Impostazione della telecamera
-    SetupTelecamera.position = vec3(0.0, 0.5, 30.0);
+    SetupTelecamera.position = vec3(0.0, 0.0, 2.0);
     SetupTelecamera.target = vec3(0.0, 0.0, 0.0);
     SetupTelecamera.direction = normalize(SetupTelecamera.target - SetupTelecamera.position);
     SetupTelecamera.upVector = vec3(0.0, 1.0, 0.0);
