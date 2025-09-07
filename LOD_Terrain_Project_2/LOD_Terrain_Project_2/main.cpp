@@ -331,6 +331,7 @@ int main() {
     int lightPowerLocTerrain_houses = glGetUniformLocation(housesProgram, "light.power");
     int originalVerticesLoc_houses = glGetUniformLocation(housesProgram, "originalPoints");
     int scaleLoc_houses = glGetUniformLocation(housesProgram, "SCALE");
+    int geomType_houses = glGetUniformLocation(housesProgram, "geometryType");
     //Houses program 2
     int modelLoc_houses2 = glGetUniformLocation(housesProgram2, "model");
     int viewLoc_houses2 = glGetUniformLocation(housesProgram2, "view");
@@ -343,6 +344,7 @@ int main() {
     int lightPowerLocTerrain_houses2 = glGetUniformLocation(housesProgram2, "light.power");
     int originalVerticesLoc_houses2 = glGetUniformLocation(housesProgram2, "originalPoints");
     int scaleLoc_houses2 = glGetUniformLocation(housesProgram2, "SCALE");
+    int geomType_houses2 = glGetUniformLocation(housesProgram2, "geometryType");
     //Roofs program
     int modelLoc_roofs = glGetUniformLocation(roofProgram, "model");
     int viewLoc_roofs = glGetUniformLocation(roofProgram, "view");
@@ -366,6 +368,7 @@ int main() {
     int lightPowerLocTerrain_molds = glGetUniformLocation(moldsProgram, "light.power");
     int originalVerticesLoc_molds = glGetUniformLocation(moldsProgram, "originalPoints");
     int scaleLoc_molds = glGetUniformLocation(moldsProgram, "SCALE");
+    int geomType_molds = glGetUniformLocation(moldsProgram, "geometryType");
     //Lamps program
     int model_lamps = glGetUniformLocation(lampProgram, "model");
     int view_lamps = glGetUniformLocation(lampProgram, "view");
@@ -610,6 +613,7 @@ int main() {
         glUniform1f(lightPowerLocTerrain_houses, light.power);
         glUniform3fv(originalVerticesLoc_houses, 8 * numHouses, reinterpret_cast<const float*>(blocksOriginalVertices));
         glUniform1f(scaleLoc_houses, 0.04f);
+        glUniform1i(geomType_houses, int(0));
 
         glBindVertexArray(housesPairA.vao);
         glDrawArrays(GL_PATCHES, 0, blocksPatchesA.size() / 3);
@@ -640,6 +644,7 @@ int main() {
         glUniform1f(lightPowerLocTerrain_houses2, light.power);
         glUniform3fv(originalVerticesLoc_houses2, 8 * numHouses, reinterpret_cast<const float*>(blocksOriginalVertices));
         glUniform1f(scaleLoc_houses2, 0.04f);
+        glUniform1i(geomType_houses2, int(1));
 
         glBindVertexArray(housesPairB.vao);
         glDrawArrays(GL_PATCHES, 0, blocksPatchesB.size() / 3);
@@ -699,6 +704,7 @@ int main() {
         glUniform1f(lightPowerLocTerrain_molds, light.power);
         glUniform3fv(originalVerticesLoc_molds, 8 * numHedges , reinterpret_cast<const float*>(moldsOriginalVertices));
         glUniform1f(scaleLoc_molds, 0.02f);
+        glUniform1i(geomType_molds, int(2));
 
         glBindVertexArray(moldsPair.vao);
         glDrawArrays(GL_PATCHES, 0, moldsPatches.size() / 3);

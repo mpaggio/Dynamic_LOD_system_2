@@ -76,28 +76,22 @@ vec3 getDisplacedPos(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 p3) {
     float epsilon = 0.001;
     bool onBlockBorder = false;
 
-    // Definizione degli spigoli per un tronco di piramide (8 vertici)
-    // 4 spigoli base inferiore, 4 spigoli base superiore, 4 spigoli verticali = 12 spigoli * 2 vertici = 24 indici
     int edges[24] = int[](
-        0, 1, 1, 2, 2, 3, 3, 0,  // base inferiore
-        4, 5, 5, 6, 6, 7, 7, 4,  // base superiore
-        0, 4, 1, 5, 2, 6, 3, 7   // spigoli verticali
+        0, 1, 1, 2, 2, 3, 3, 0,   // base inferiore
+        4, 5, 5, 6, 6, 7, 7, 4,   // base superiore
+        0, 4, 1, 5, 2, 6, 3, 7    // verticali
         );
 
-    // Controlla per entrambi i tronchi di piramide
-    for (int trunk = 0; trunk < 6; ++trunk) {
-        int baseIndex = trunk * 8;
+    // Controlla per il tronco di piramide corrispondente
+    int baseIndex = (gl_PrimitiveID / 6) * 8;
+    
+    for (int i = 0; i < 24; i += 2) {
+        vec3 a = originalPoints[baseIndex + edges[i]];
+        vec3 b = originalPoints[baseIndex + edges[i + 1]];
 
-        for (int i = 0; i < 24; i += 2) {
-            vec3 a = originalPoints[baseIndex + edges[i]];
-            vec3 b = originalPoints[baseIndex + edges[i + 1]];
-
-            if (isPointOnSegment(pos, a, b, epsilon)) {
-                onBlockBorder = true;
-                break;
-            }
+        if (isPointOnSegment(pos, a, b, epsilon)) {
+            onBlockBorder = true;
         }
-        if (onBlockBorder) break;
     }
 
     bool isHorizontalFace = abs(normal_tcs[0].y) > 0.99;
